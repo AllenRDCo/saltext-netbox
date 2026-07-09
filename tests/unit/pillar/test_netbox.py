@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-import saltext.netbox.pillar.netbox as netbox
+from saltext.netbox.pillar import netbox
 
 
 @pytest.fixture

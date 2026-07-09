@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-import saltext.netbox.modules.netbox as netbox
+from saltext.netbox.modules import netbox
 
 try:
     import pynetbox  # pylint: disable=unused-import
@@ -86,7 +86,8 @@ def test_get_secret():
     with patch("pynetbox.api", MagicMock()) as mock:
         with patch.dict(netbox.__utils__, {"args.clean_kwargs": mocked_clean_kwargs_get}):
             netbox.get_("secrets", "secrets", name="test")
-            assert "token" and "private_key_file" in mock.call_args[1]
+            assert "token" in mock.call_args[1]
+            assert "private_key_file" in mock.call_args[1]
 
 
 def test_token_present():

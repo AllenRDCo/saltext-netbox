@@ -726,10 +726,8 @@ def _get_devices(api_url, minion_id, headers, api_query_result_limit):
             break
 
     # Set the node type
-    device_count = 0
     for device in device_results:
-        device_results[device_count]["node_type"] = "device"
-        device_count += 1
+        device["node_type"] = "device"
 
     # Return the results
     return device_results
@@ -763,10 +761,8 @@ def _get_virtual_machines(api_url, minion_id, headers, api_query_result_limit):
             break
 
     # Set the node type
-    vm_count = 0
     for vm in vm_results:
-        vm_results[vm_count]["node_type"] = "virtual-machine"
-        vm_count += 1
+        vm["node_type"] = "virtual-machine"
 
     # Return the results
     return vm_results
@@ -784,6 +780,8 @@ def _get_interfaces(api_url, minion_id, node_id, node_type, headers, api_query_r
     elif node_type == "virtual-machine":
         app_name = "virtualization"
         node_param = "virtual_machine_id"
+    else:
+        raise ValueError(f"Unknown node_type: {node_type}")
     interfaces_url = "{api_url}/{app}/{endpoint}".format(
         api_url=api_url, app=app_name, endpoint="interfaces"
     )
@@ -819,13 +817,11 @@ def _get_interfaces(api_url, minion_id, node_id, node_type, headers, api_query_r
             break
 
     # Clean up duplicate data in the dictionary
-    interface_count = 0
     for interface in interfaces_results:
         if node_type == "device":
-            del interfaces_results[interface_count]["device"]
+            del interface["device"]
         elif node_type == "virtual-machine":
-            del interfaces_results[interface_count]["virtual_machine"]
-        interface_count += 1
+            del interface["virtual_machine"]
 
     # Return the results
     return interfaces_results
@@ -840,11 +836,11 @@ def _get_interface_ips(api_url, minion_id, node_id, node_type, headers, api_quer
     )
     interface_ips_results = []
     if node_type == "device":
-        app_name = "dcim"
         node_param = "device_id"
     elif node_type == "virtual-machine":
-        app_name = "virtualization"
         node_param = "virtual_machine_id"
+    else:
+        raise ValueError(f"Unknown node_type: {node_type}")
     interface_ips_url = "{api_url}/{app}/{endpoint}".format(
         api_url=api_url, app="ipam", endpoint="ip-addresses"
     )
@@ -943,7 +939,6 @@ def _get_connected_devices(api_url, minion_id, interfaces, headers):
         device_url = "{api_url}/{app}/{endpoint}/{dev_id}".format(
             api_url=api_url, app="dcim", endpoint="devices", dev_id=dev_id
         )
-        device_results = []
         device_ret = salt.utils.http.query(device_url, header_dict=headers, decode=True)
         if "error" in device_ret:
             log.error(
@@ -998,10 +993,8 @@ def _get_site_prefixes(api_url, minion_id, site_name, site_id, headers, api_quer
             break
 
     # Clean up duplicate data in the dictionary
-    prefix_count = 0
     for prefix in site_prefixes_results:
-        del site_prefixes_results[prefix_count]["site"]
-        prefix_count += 1
+        del prefix["site"]
 
     # Return the results
     return site_prefixes_results
@@ -1037,7 +1030,7 @@ def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
             return proxy
 
 
-def ext_pillar(minion_id, pillar, *args, **kwargs):
+def ext_pillar(minion_id, pillar, *args, **kwargs):  # pylint: disable=unused-argument
     """
     Query NetBox API for minion data
     """

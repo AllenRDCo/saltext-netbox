@@ -48,7 +48,7 @@ def __virtual__():
     if not HAS_PYNETBOX:
         return (
             False,
-            "The netbox execution module cannot be loaded: " "pynetbox library is not installed.",
+            "The netbox execution module cannot be loaded: pynetbox library is not installed.",
         )
     else:
         return True
@@ -72,7 +72,7 @@ def _nb_obj(auth_required=False):
 def _strip_url_field(input_dict):
     if "url" in input_dict.keys():
         del input_dict["url"]
-    for k, v in input_dict.items():
+    for v in input_dict.values():
         if isinstance(v, dict):
             _strip_url_field(v)
     return input_dict
@@ -101,6 +101,12 @@ def slugify(value):
     """'
     Slugify given value.
     Credit to Djangoproject https://docs.djangoproject.com/en/2.0/_modules/django/utils/text/#slugify
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.slugify "Some Value"
     """
     value = re.sub(r"[^\w\s-]", "", value).strip().lower()
     return re.sub(r"[-\s]+", "-", value)
@@ -143,12 +149,14 @@ def filter_(app, endpoint, **kwargs):
 
     Returns a list of dictionaries
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion netbox.filter dcim devices status=1 role=router
     """
     ret = []
-    nb = _nb_obj(auth_required=True if app in AUTH_ENDPOINTS else False)
+    nb = _nb_obj(auth_required=app in AUTH_ENDPOINTS)
     nb_query = getattr(getattr(nb, app), endpoint).filter(
         **__utils__["args.clean_kwargs"](**kwargs)
     )
@@ -168,6 +176,8 @@ def get_(app, endpoint, id=None, **kwargs):
 
     Returns a single dictionary
 
+    CLI Example:
+
     To get an item based on ID.
 
     .. code-block:: bash
@@ -186,7 +196,7 @@ def get_(app, endpoint, id=None, **kwargs):
             app,
             endpoint,
             id=id,
-            auth_required=True if app in AUTH_ENDPOINTS else False,
+            auth_required=app in AUTH_ENDPOINTS,
             **kwargs,
         )
     )
@@ -335,7 +345,7 @@ def create_site(site):
             return False
 
 
-def create_device(name, role, model, manufacturer, site):
+def create_device(name, role, model, manufacturer, site):  # pylint: disable=unused-argument
     """
     .. versionadded:: 2019.2.0
 
@@ -370,8 +380,6 @@ def create_device(name, role, model, manufacturer, site):
         nb_site = get_("dcim", "sites", name=site)
         if not nb_site:
             return False
-
-        status = {"label": "Active", "value": 1}
     except pynetbox.RequestError as e:
         log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
         return False
@@ -658,7 +666,7 @@ def openconfig_lacp(device_name=None):
     for interface in interfaces:
         if not interface["lag"]:
             continue
-        if_name, if_unit = _if_name_unit(interface["name"])
+        if_name, _ = _if_name_unit(interface["name"])
         parent_if = interface["lag"]["name"]
         if parent_if not in oc_lacp:
             oc_lacp[parent_if] = {
