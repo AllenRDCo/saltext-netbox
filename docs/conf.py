@@ -77,7 +77,14 @@ rst_prolog = """
 
 # -- General configuration ---------------------------------------------------
 
-linkcheck_ignore = [r"http://localhost:\d+"]
+linkcheck_ignore = [
+    r"http://localhost:\d+",
+    # Placeholder domain used in docstring examples, reserved for docs per RFC 2606.
+    r"https?://netbox\.example\.com.*",
+    # Docstrings reference the old ops.openconfig.net docs, which permanently
+    # redirect to openconfig.net and no longer have matching anchors there.
+    r"https?://ops\.openconfig\.net.*",
+]
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
