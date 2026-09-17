@@ -38,6 +38,7 @@ requires-python = ">= 3.10"
 dynamic = ["version"]
 dependencies = [
     "salt>=3006",
+    "pynetbox>=7.8.0",
 ]
 
 [project.readme]
@@ -83,7 +84,6 @@ tests = [
     "pytest>=7.2.0",
     "pytest-salt-factories>=1.0.0",
     "pytest-instafail",
-    "pynetbox",
 ]
 
 [project.entry-points."salt.loader"]

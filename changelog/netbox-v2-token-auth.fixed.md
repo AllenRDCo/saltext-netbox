@@ -1,0 +1,1 @@
+The `netbox` ext_pillar now sends the correct `Authorization` scheme for NetBox v2 API tokens (`nbt_<id>.<secret>`, introduced in NetBox 4.5.0), using `Bearer` instead of the legacy `Token` scheme. Previously it always used `Token`, causing authentication failures (HTTP 403) after rotating to a v2-format token. Legacy v1 tokens are unaffected.

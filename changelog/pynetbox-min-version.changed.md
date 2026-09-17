@@ -1,0 +1,1 @@
+`pynetbox` is now a required runtime dependency, pinned to `>=7.8.0`, since that is the first version to support NetBox v2 API tokens (`Bearer` auth scheme). Older pynetbox versions will fail to authenticate against NetBox once a v2 token is in use.

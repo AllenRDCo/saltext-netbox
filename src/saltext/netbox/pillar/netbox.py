@@ -695,6 +695,23 @@ from salt._compat import ipaddress
 # Set up logging
 log = logging.getLogger(__name__)
 
+# NetBox v2 API tokens (introduced in NetBox 4.5.0) are formatted as
+# "nbt_<id>.<secret>" and must be sent using the "Bearer" auth scheme
+# instead of the legacy "Token" scheme used by v1 tokens.
+NETBOX_V2_TOKEN_PREFIX = "nbt_"
+
+
+def _is_v2_token(token):
+    if not token or not token.startswith(NETBOX_V2_TOKEN_PREFIX):
+        return False
+    token_body = token[len(NETBOX_V2_TOKEN_PREFIX) :]
+    return "." in token_body
+
+
+def _auth_header(api_token):
+    scheme = "Bearer" if _is_v2_token(api_token) else "Token"
+    return {"Authorization": f"{scheme} {api_token}"}
+
 
 def _get_devices(api_url, minion_id, headers, api_query_result_limit):
     device_url = "{api_url}/{app}/{endpoint}".format(
@@ -709,10 +726,11 @@ def _get_devices(api_url, minion_id, headers, api_query_result_limit):
         # Check status code for API call
         if "error" in device_ret:
             log.error(
-                'API query failed for "%s", status code: %d, error %s',
+                'API query failed for "%s", status code: %d, error %s, body: %s',
                 minion_id,
                 device_ret["status"],
                 device_ret["error"],
+                device_ret.get("body"),
             )
             return []
         else:
@@ -746,10 +764,11 @@ def _get_virtual_machines(api_url, minion_id, headers, api_query_result_limit):
         # Check status code for API call
         if "error" in vm_ret:
             log.error(
-                'API query failed for "%s", status code: %d, error %s',
+                'API query failed for "%s", status code: %d, error %s, body: %s',
                 minion_id,
                 vm_ret["status"],
                 vm_ret["error"],
+                vm_ret.get("body"),
             )
             return []
         else:
@@ -798,12 +817,13 @@ def _get_interfaces(api_url, minion_id, node_id, node_type, headers, api_query_r
         # Check status code for API call
         if "error" in interfaces_ret:
             log.error(
-                'Unable to retrieve interfaces for "%s" (Type %s, ID %d), status code: %d, error %s',
+                'Unable to retrieve interfaces for "%s" (Type %s, ID %d), status code: %d, error %s, body: %s',
                 minion_id,
                 node_type,
                 node_id,
                 interfaces_ret["status"],
                 interfaces_ret["error"],
+                interfaces_ret.get("body"),
             )
             return []
         else:
@@ -858,12 +878,13 @@ def _get_interface_ips(api_url, minion_id, node_id, node_type, headers, api_quer
         # Check status code for API call
         if "error" in interface_ips_ret:
             log.error(
-                'Unable to retrieve interface IP addresses for "%s" (Type %s, ID %d), status code: %d, error %s',
+                'Unable to retrieve interface IP addresses for "%s" (Type %s, ID %d), status code: %d, error %s, body: %s',
                 minion_id,
                 node_type,
                 node_id,
                 interface_ips_ret["status"],
                 interface_ips_ret["error"],
+                interface_ips_ret.get("body"),
             )
             return []
         else:
@@ -908,11 +929,12 @@ def _get_site_details(api_url, minion_id, site_name, site_id, headers):
     site_details_ret = salt.utils.http.query(site_url, header_dict=headers, decode=True)
     if "error" in site_details_ret:
         log.error(
-            "Unable to retrieve site details for %s (ID %d), status code: %d, error %s",
+            "Unable to retrieve site details for %s (ID %d), status code: %d, error %s, body: %s",
             site_name,
             site_id,
             site_details_ret["status"],
             site_details_ret["error"],
+            site_details_ret.get("body"),
         )
         return {}
     else:
@@ -942,10 +964,11 @@ def _get_connected_devices(api_url, minion_id, interfaces, headers):
         device_ret = salt.utils.http.query(device_url, header_dict=headers, decode=True)
         if "error" in device_ret:
             log.error(
-                'API query failed for "%s", status code: %d, error %s',
+                'API query failed for "%s", status code: %d, error %s, body: %s',
                 minion_id,
                 device_ret["status"],
                 device_ret["error"],
+                device_ret.get("body"),
             )
         else:
             connected_devices_result[dev_id] = dict(device_ret["dict"])
@@ -975,11 +998,12 @@ def _get_site_prefixes(api_url, minion_id, site_name, site_id, headers, api_quer
         # Check status code for API call
         if "error" in site_prefixes_ret:
             log.error(
-                "Unable to retrieve site prefixes for %s (ID %d), status code: %d, error %s",
+                "Unable to retrieve site prefixes for %s (ID %d), status code: %d, error %s, body: %s",
                 site_name,
                 site_id,
                 site_prefixes_ret["status"],
                 site_prefixes_ret["error"],
+                site_prefixes_ret.get("body"),
             )
             return []
         else:
@@ -1012,10 +1036,11 @@ def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
     # Check status code for API call
     if "error" in platform_ret:
         log.error(
-            "Unable to proxy details for %s, status code: %d, error %s",
+            "Unable to proxy details for %s, status code: %d, error %s, body: %s",
             minion_id,
             platform_ret["status"],
             platform_ret["error"],
+            platform_ret.get("body"),
         )
     else:
         # Assign results from API call to "proxy" key if the platform has a
@@ -1083,7 +1108,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):  # pylint: disable=unused-ar
     # Fetch device from API
     headers = {}
     if api_token:
-        headers = {"Authorization": f"Token {api_token}"}
+        headers = _auth_header(api_token)
     else:
         log.error("The value for api_token is not set")
         return ret
